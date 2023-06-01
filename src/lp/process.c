@@ -117,7 +117,11 @@ void process_lp_init(struct lp_ctx *lp)
 void process_lp_fini(struct lp_ctx *lp)
 {
 	current_lp = lp;
+#ifdef LP_STATS
 	global_config.dispatcher(lp - lps, 0, LP_FINI, &lp->stats, sizeof(struct lp_stats), lp->state_pointer);
+#else
+	global_config.dispatcher(lp - lps, 0, LP_FINI, NULL, 0, lp->state_pointer);
+#endif // LP_STATS
 
 	for(array_count_t i = 0; i < array_count(lp->p.p_msgs); ++i) {
 		struct lp_msg *msg = array_get_at(lp->p.p_msgs, i);
