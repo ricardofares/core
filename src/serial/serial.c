@@ -65,7 +65,11 @@ static void serial_simulation_fini(void)
 	for(uint64_t i = 0; i < global_config.lps; ++i) {
 		struct lp_ctx *lp = &lps[i];
 		current_lp = lp;
+#ifdef LP_STATS
+		global_config.dispatcher(i, 0, LP_FINI, &lp->stats, sizeof(struct lp_stats), lp->state_pointer);
+#else
 		global_config.dispatcher(i, 0, LP_FINI, NULL, 0, lp->state_pointer);
+#endif // LP_STATS
 		model_allocator_lp_fini(&lp->mm_state);
 	}
 
@@ -93,6 +97,9 @@ static int serial_simulation_run(void)
 		current_lp = lp;
 
 		common_msg_process(lp, msg);
+#ifdef LP_STATS
+		lp->stats.ev_proc_count++;
+#endif // LP_STATS
 
 		if(unlikely(lp->termination_t < 0 && global_config.committed(msg->dest, lp->state_pointer))) {
 			lp->termination_t = msg->dest_t;
