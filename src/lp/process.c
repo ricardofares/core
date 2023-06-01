@@ -82,6 +82,9 @@ static inline void checkpoint_take(struct lp_ctx *lp)
 	stats_take(STATS_CKPT_SIZE, lp->mm_state.full_ckpt_size);
 	stats_take(STATS_CKPT, 1);
 	stats_take(STATS_CKPT_TIME, timer_hr_value(t));
+#ifdef LP_STATS
+	lp->stats.ckpt_take_count++;
+#endif // LP_STATS
 }
 
 /**
@@ -111,7 +114,7 @@ void process_lp_init(struct lp_ctx *lp)
 void process_lp_fini(struct lp_ctx *lp)
 {
 	current_lp = lp;
-	global_config.dispatcher(lp - lps, 0, LP_FINI, NULL, 0, lp->state_pointer);
+	global_config.dispatcher(lp - lps, 0, LP_FINI, &lp->stats, sizeof(struct lp_stats), lp->state_pointer);
 
 	for(array_count_t i = 0; i < array_count(lp->p.p_msgs); ++i) {
 		struct lp_msg *msg = array_get_at(lp->p.p_msgs, i);
@@ -143,6 +146,11 @@ static inline void silent_execution(const struct lp_ctx *lp, array_count_t last_
 	timer_uint t = timer_hr_new();
 	silent_processing = true;
 
+#ifdef LP_STATS
+	// A way to drop the `lp_ctx` constness.
+	struct lp_stats *stats = (struct lp_stats *)&lp->stats;
+#endif // LP_STATS
+
 	void *state_p = lp->state_pointer;
 	do {
 		const struct lp_msg *msg = array_get_at(lp->p.p_msgs, last_i);
@@ -151,6 +159,9 @@ static inline void silent_execution(const struct lp_ctx *lp, array_count_t last_
 
 		global_config.dispatcher(msg->dest, msg->dest_t, msg->m_type, msg->pl, msg->pl_size, state_p);
 		stats_take(STATS_MSG_SILENT, 1);
+#ifdef LP_STATS
+		stats->silent_proc_count++;
+#endif // LP_STATS
 	} while(++last_i < past_i);
 
 	silent_processing = false;
@@ -207,6 +218,9 @@ static void do_rollback(struct lp_ctx *lp, array_count_t past_i)
 	stats_take(STATS_RECOVERY_TIME, timer_hr_value(t));
 	stats_take(STATS_ROLLBACK, 1);
 	silent_execution(lp, last_i, past_i);
+#ifdef LP_STATS
+	lp->stats.rb_count++;
+#endif // LP_STATS
 }
 
 /**
@@ -387,6 +401,9 @@ void process_msg(void)
 
 	common_msg_process(lp, msg);
 	lp->p.bound = msg->dest_t;
+#ifdef LP_STATS
+	lp->stats.ev_proc_count++;
+#endif // LP_STATS
 	array_push(lp->p.p_msgs, msg);
 
 	auto_ckpt_register_good(&lp->auto_ckpt);

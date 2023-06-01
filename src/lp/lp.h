@@ -34,6 +34,10 @@ struct lp_ctx {
 	struct process_ctx p;
 	/// The memory allocator state of this LP
 	struct mm_state mm_state;
+#ifdef LP_STATS
+	/// The collected statistics of this LP
+	struct lp_stats stats;
+#endif // LP_STATS
 };
 
 /**
@@ -41,7 +45,7 @@ struct lp_ctx {
  * @param lp_id the id of the LP
  * @return the id of the node which hosts the LP identified by @p lp_id
  */
-#define lid_to_nid(lp_id) ((nid_t)((lp_id) * n_nodes / global_config.lps))
+#define lid_to_nid(lp_id) ((nid_t)((lp_id)*n_nodes / global_config.lps))
 
 /**
  * @brief Compute the id of the thread which hosts a given LP
@@ -50,7 +54,7 @@ struct lp_ctx {
  *
  * Horrible things may happen if @p lp_id is not locally hosted (use #lid_to_nid() to make sure of that!)
  */
-#define lid_to_rid(lp_id) ((rid_t)(((lp_id) - lid_node_first) * global_config.n_threads / n_lps_node))
+#define lid_to_rid(lp_id) ((rid_t)(((lp_id)-lid_node_first) * global_config.n_threads / n_lps_node))
 
 extern uint64_t lid_node_first;
 extern __thread uint64_t lid_thread_first;

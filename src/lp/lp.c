@@ -96,6 +96,13 @@ void lp_init(void)
 		lp->state_pointer = NULL;
 		lp->fossil_epoch = 0;
 
+#ifdef LP_STATS
+		lp->stats.ev_proc_count = 0;
+		lp->stats.rb_count = 0;
+		lp->stats.silent_proc_count = 0;
+		lp->stats.ckpt_take_count = 0;
+#endif // LP_STATS
+
 		current_lp = lp;
 		lp->rng_ctx = rs_malloc(sizeof(*lp->rng_ctx));
 		random_lib_lp_init(i, lp->rng_ctx);
