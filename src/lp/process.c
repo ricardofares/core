@@ -77,13 +77,16 @@ void ScheduleNewEvent(lp_id_t receiver, simtime_t timestamp, unsigned event_type
  */
 static inline void checkpoint_take(struct lp_ctx *lp)
 {
-	timer_uint t = timer_hr_new();
+	timer_uint t, tv;
+	t = timer_hr_new();
 	model_allocator_checkpoint_take(&lp->mm_state, array_count(lp->p.p_msgs));
 	stats_take(STATS_CKPT_SIZE, lp->mm_state.full_ckpt_size);
 	stats_take(STATS_CKPT, 1);
-	stats_take(STATS_CKPT_TIME, timer_hr_value(t));
+	tv = timer_hr_value(t);
+	stats_take(STATS_CKPT_TIME, tv);
 #ifdef LP_STATS
 	lp->stats.ckpt_take_count++;
+	lp->stats.ckpt_take_time += tv;
 #endif // LP_STATS
 }
 
@@ -173,7 +176,11 @@ static inline void silent_execution(const struct lp_ctx *lp, array_count_t last_
  * @param proc_p the message processing data for the LP that has to send anti-messages
  * @param past_i the index in @a proc_p of the last validly processed message
  */
+#ifdef LP_STATS
+static inline void send_anti_messages(struct process_ctx *proc_p, struct lp_stats *stats, array_count_t past_i)
+#else
 static inline void send_anti_messages(struct process_ctx *proc_p, array_count_t past_i)
+#endif // LP_STATS
 {
 	array_count_t p_cnt = array_count(proc_p->p_msgs);
 	for(array_count_t i = past_i; i < p_cnt; ++i) {
@@ -194,6 +201,9 @@ static inline void send_anti_messages(struct process_ctx *proc_p, array_count_t 
 			}
 
 			stats_take(STATS_MSG_ANTI, 1);
+#ifdef LP_STATS
+			stats->sent_anti_count++;
+#endif // LP_STATS
 			msg = array_get_at(proc_p->p_msgs, ++i);
 		}
 
@@ -212,14 +222,21 @@ static inline void send_anti_messages(struct process_ctx *proc_p, array_count_t 
  */
 static void do_rollback(struct lp_ctx *lp, array_count_t past_i)
 {
-	timer_uint t = timer_hr_new();
+	timer_uint t, tv;
+	t = timer_hr_new();
+#ifdef LP_STATS
+	send_anti_messages(&lp->p, &lp->stats, past_i);
+#else
 	send_anti_messages(&lp->p, past_i);
+#endif // LP_STATS
 	array_count_t last_i = model_allocator_checkpoint_restore(&lp->mm_state, past_i);
-	stats_take(STATS_RECOVERY_TIME, timer_hr_value(t));
+	tv = timer_hr_value(t);
+	stats_take(STATS_RECOVERY_TIME, tv);
 	stats_take(STATS_ROLLBACK, 1);
 	silent_execution(lp, last_i, past_i);
 #ifdef LP_STATS
 	lp->stats.rb_count++;
+	lp->stats.rb_recovery_time += tv;
 #endif // LP_STATS
 }
 

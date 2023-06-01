@@ -39,12 +39,25 @@ typedef uint64_t lp_id_t;
 struct lp_stats {
 	/// The count of how many events have been processed by this LP
 	uint64_t ev_proc_count;
+	/// The time spent by this LP inside the model dispatcher function
+	uint64_t ev_proc_time;
 	/// The count of how many rollbacks have been made by this LP
 	uint64_t rb_count;
+	/// The time spent by this LP for recovery from a rollback; checkpoint restore and anti-message sending
+	/// activities
+	uint64_t rb_recovery_time;
 	/// The count of how many silent messages have been processed by this LP
 	uint64_t silent_proc_count;
 	/// The count of how many checkpoints have been taken by this LP
 	uint64_t ckpt_take_count;
+	/// The time spent by this LP in checkpointing activities
+	uint64_t ckpt_take_time;
+	/// The count of generated anti-messages by this LP
+	uint64_t sent_anti_count;
+	/// The thread which is computing the LP
+	unsigned rid;
+	/// The node id which is computing the LP
+	int nid;
 };
 
 /**
